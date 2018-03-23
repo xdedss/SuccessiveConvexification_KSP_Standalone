@@ -19,6 +19,15 @@ This branch:
 - Adds a tremendous amount of documentation and pythonic operations
 - Mostly conforms to PEP8
 
+- Due to intense hatred of variables ending with `_`, replaced all cvx variables ending with `_` with proper names
+   - v instead of _ denotes a cvx Variable
+   - parm instead of _ denotes a cvx Parameter
+
+
+- Replaced a great number of () with [] to clarify definitions of arrays versus function calls
+
+- Replaced all dynamics functions in parameters with the sympy generated ones in dynamics_functions.py
+
 ----
 
 # How to Run
