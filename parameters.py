@@ -1,10 +1,20 @@
+from dynamics_functions import Dynamics
 import numpy as np
 
 # Trajectory points
 K = 70
 dt = 1 / (K - 1)
+
 # Max solver iterations
 iterations = 15
+
+# exponentially increase w_delta for iterations above 'start'
+# this puts major pressure on the dynamics trust region to converge
+force_converge = {
+                    'active'  : False,
+                    'start'   : 4,
+                    'amount'  : 1e3
+                }
 
 # Mass
 m_wet = 2.0
@@ -23,34 +33,31 @@ nu_tol = 1e-8
 delta_tol = 1e-3
 
 # State constraints
-r_I_init = np.array((20., 5, 5))
-v_I_init = np.array((-7, -3, -3))
-q_B_I_init = np.array((1.0, 0.0, 0.0, 0.0))
-w_B_init = np.array((0., 0., 0.))
+r_I_init = np.array([20., 5., 5.])
+v_I_init = np.array([-4, -3, -2])
+q_B_I_init = np.array([1.0, 0.0, 0.0, 0.0])
+w_B_init = np.array([0., 0., 0.])
 
-r_I_final = np.array((0., 0., 0.))
-v_I_final = np.array((0., 0., 0.))
-q_B_I_final = np.array((1.0, 0.0, 0.0, 0.0))
-w_B_final = np.array((0., 0., 0.))
+r_I_final = np.array([0., 0., 0.])
+v_I_final = np.array([0., 0., 0.])
+q_B_I_final = np.array([1.0, 0.0, 0.0, 0.0])
+w_B_final = np.array([0., 0., 0.])
 
 w_B_max = np.deg2rad(60)
 
 # Angles
-cos_delta_max = np.cos(np.deg2rad(15))
+cos_delta_max = np.cos(np.deg2rad(20))
 cos_theta_max = np.cos(np.deg2rad(90))
-tan_gamma_gs = np.tan(np.deg2rad(20))
+tan_gamma_gs = np.tan(np.deg2rad(42))
 
 # Angular moment of inertia
-J_B_I = np.array((1e-2, 1e-2, 1e-2))
-J_B1, J_B2, J_B3 = J_B_I
+J_B_I = 1e-2 * np.eye(3)
 
 # Vector from thrust point to CoM
 r_T_B = np.array((-1e-2, 0., 0.))
-r_T_B1, r_T_B2, r_T_B3 = r_T_B
 
 # Gravity
 g_I = np.array((-1., 0., 0.))
-g_I1, g_I2, g_I3 = g_I
 
 # Thrust limits
 T_min = 2.0
@@ -59,103 +66,19 @@ T_max = 5.0
 # Fuel consumption
 alpha_m = 0.01
 
+parms = {
+            'alpha': alpha_m,
+            'g_I'  : g_I,
+
+            'rTB'  : r_T_B,
+            'J'    : J_B_I,
+}
 
 # Linearized state matrices:
+matrix_functions = Dynamics()
+matrix_functions.set_parameters(parms)
 
-# A Matrix
-def A(x, u, sigma_hat):
-    return sigma_hat * np.array((
-
-        (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0),
-        ((u[0] * (2 * x[9] ** 2 + 2 * x[10] ** 2 - 1)) / x[0] ** 2 - (u[1] * (2 * x[7] * x[10] + 2 * x[8] * x[9])) / x[
-            0] ** 2 + (
-                 u[2] * (2 * x[7] * x[9] - 2 * x[8] * x[10])) / x[0] ** 2, 0, 0, 0, 0, 0, 0,
-         (2 * u[1] * x[10]) / x[0] - (
-                 2 * u[2] * x[9]) / x[0], (2 * u[1] * x[9]) / x[0] + (2 * u[2] * x[10]) / x[0],
-         (2 * u[1] * x[8]) / x[0] - (
-                 4 * u[0] * x[9]) / x[0] - (2 * u[2] * x[7]) / x[0],
-         (2 * u[1] * x[7]) / x[0] - (4 * u[0] * x[10]) / x[0] + (
-                 2 * u[2] * x[8]) / x[0], 0, 0, 0),
-        ((u[1] * (2 * x[8] ** 2 + 2 * x[10] ** 2 - 1)) / x[0] ** 2 + (u[0] * (2 * x[7] * x[10] - 2 * x[8] * x[9])) / x[
-            0] ** 2 - (
-                 u[2] * (2 * x[7] * x[8] + 2 * x[9] * x[10])) / x[0] ** 2, 0, 0, 0, 0, 0, 0,
-         (2 * u[2] * x[8]) / x[0] - (
-                 2 * u[0] * x[10]) / x[0],
-         (2 * u[0] * x[9]) / x[0] - (4 * u[1] * x[8]) / x[0] + (2 * u[2] * x[7]) / x[0], (
-                 2 * u[0] * x[8]) / x[0] + (2 * u[2] * x[10]) / x[0],
-         (2 * u[2] * x[9]) / x[0] - (4 * u[1] * x[10]) / x[0] - (
-                 2 * u[0] * x[7]) / x[0], 0, 0, 0),
-        ((u[2] * (2 * x[8] ** 2 + 2 * x[9] ** 2 - 1)) / x[0] ** 2 - (u[0] * (2 * x[7] * x[9] + 2 * x[8] * x[10])) / x[
-            0] ** 2 + (
-                 u[1] * (2 * x[7] * x[8] - 2 * x[9] * x[10])) / x[0] ** 2, 0, 0, 0, 0, 0, 0,
-         (2 * u[0] * x[9]) / x[0] - (
-                 2 * u[1] * x[8]) / x[0],
-         (2 * u[0] * x[10]) / x[0] - (2 * u[1] * x[7]) / x[0] - (4 * u[2] * x[8]) / x[0], (
-                 2 * u[0] * x[7]) / x[0] + (2 * u[1] * x[10]) / x[0] - (4 * u[2] * x[9]) / x[0],
-         (2 * u[0] * x[8]) / x[0] + (
-                 2 * u[1] * x[9]) / x[0], 0, 0, 0),
-        (0, 0, 0, 0, 0, 0, 0, 0, -x[11] / 2, -x[12] / 2, -x[13] / 2, -x[8] / 2, -x[9] / 2, -x[10] / 2),
-        (0, 0, 0, 0, 0, 0, 0, x[11] / 2, 0, x[13] / 2, -x[12] / 2, x[7] / 2, -x[10] / 2, x[9] / 2),
-        (0, 0, 0, 0, 0, 0, 0, x[12] / 2, -x[13] / 2, 0, x[11] / 2, x[10] / 2, x[7] / 2, -x[8] / 2),
-        (0, 0, 0, 0, 0, 0, 0, x[13] / 2, x[12] / 2, -x[11] / 2, 0, -x[9] / 2, x[8] / 2, x[7] / 2),
-        (
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (J_B2 * x[13] - J_B3 * x[13]) / J_B1, (J_B2 * x[12] - J_B3 * x[12]) / J_B1),
-        (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -(J_B1 * x[13] - J_B3 * x[13]) / J_B2, 0,
-         -(J_B1 * x[11] - J_B3 * x[11]) / J_B2),
-        (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (J_B1 * x[12] - J_B2 * x[12]) / J_B3, (J_B1 * x[11] - J_B2 * x[11]) / J_B3, 0)
-
-    ))
-
-
-# B Matrix
-def B(x, u, sigma_hat):
-    return sigma_hat * np.array((
-        (alpha_m * u[0] / -np.linalg.norm(u),
-         alpha_m * u[1] / -np.linalg.norm(u),
-         alpha_m * u[2] / -np.linalg.norm(u)),
-        (0, 0, 0),
-        (0, 0, 0),
-        (0, 0, 0),
-        (-(2 * x[9] ** 2 + 2 * x[10] ** 2 - 1) / x[0], (2 * x[7] * x[10] + 2 * x[8] * x[9]) / x[0],
-         -(2 * x[7] * x[9] - 2 * x[8] * x[10]) / x[0]),
-        (-(2 * x[7] * x[10] - 2 * x[8] * x[9]) / x[0], -(2 * x[8] ** 2 + 2 * x[10] ** 2 - 1) / x[0],
-         (2 * x[7] * x[8] + 2 * x[9] * x[10]) / x[0]),
-        ((2 * x[7] * x[9] + 2 * x[8] * x[10]) / x[0], -(2 * x[7] * x[8] - 2 * x[9] * x[10]) / x[0],
-         -(2 * x[8] ** 2 + 2 * x[9] ** 2 - 1) / x[0]),
-        (0, 0, 0),
-        (0, 0, 0),
-        (0, 0, 0),
-        (0, 0, 0),
-        (0, -r_T_B3 / J_B1, r_T_B2 / J_B1),
-        (r_T_B3 / J_B2, 0, -r_T_B1 / J_B2),
-        (-r_T_B2 / J_B3, r_T_B1 / J_B3, 0)
-    ))
-
-
-# f Matrix (x_dot)
-def f(x, u):
-    return np.array((
-        -alpha_m * np.linalg.norm(u),
-        x[4],
-        x[5],
-        x[6],
-        g_I1 - (u[0] * (2 * x[9] ** 2 + 2 * x[10] ** 2 - 1)) / x[0] + (u[1] * (2 * x[7] * x[10] + 2 * x[8] * x[9])) / x[
-            0] - (
-                u[2] * (2 * x[7] * x[9] - 2 * x[8] * x[10])) / x[0],
-        g_I2 - (u[1] * (2 * x[8] ** 2 + 2 * x[10] ** 2 - 1)) / x[0] - (u[0] * (2 * x[7] * x[10] - 2 * x[8] * x[9])) / x[
-            0] + (
-                u[2] * (2 * x[7] * x[8] + 2 * x[9] * x[10])) / x[0],
-        g_I3 - (u[2] * (2 * x[8] ** 2 + 2 * x[9] ** 2 - 1)) / x[0] + (u[0] * (2 * x[7] * x[9] + 2 * x[8] * x[10])) / x[
-            0] - (
-                u[1] * (2 * x[7] * x[8] - 2 * x[9] * x[10])) / x[0],
-        - (x[8] * x[11]) / 2 - (x[9] * x[12]) / 2 - (x[10] * x[13]) / 2,
-        (x[7] * x[11]) / 2 + (x[9] * x[13]) / 2 - (x[10] * x[12]) / 2,
-        (x[7] * x[12]) / 2 - (x[8] * x[13]) / 2 + (x[10] * x[11]) / 2,
-        (x[7] * x[13]) / 2 + (x[8] * x[12]) / 2 - (x[9] * x[11]) / 2,
-        (r_T_B2 * u[2] - r_T_B3 * u[1] + J_B2 * x[12] * x[13] - J_B3 * x[12] * x[13]) / J_B1,
-        - (r_T_B1 * u[2] - r_T_B3 * u[0] + J_B1 * x[11] * x[13] - J_B3 * x[11] * x[13]) / J_B2,
-        (r_T_B1 * u[1] - r_T_B2 * u[0] + J_B1 * x[11] * x[12] - J_B2 * x[11] * x[12]) / J_B3,
-    ))
+# Add to local namespace so that the main program can see them here
+A = matrix_functions.A
+B = matrix_functions.B
+f = matrix_functions.f
