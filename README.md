@@ -57,4 +57,4 @@ Roadmap:
 
 History of this project:
 
-- After the paper came out, I immediately started working on a python implementation. I worked for about 2 weeks until I came across [Sven Niederberger's](https://github.com/EmbersArc) implemenation on github! Although I had an almost working implementation already, the dynamics were... fishy... So I forked the repo and made a great number of changes, finally fixing the symbolic dynamics.
+- After the paper came out, I immediately started working on a python implementation. I worked for about 2 weeks until I came across [Sven Niederberger's](https://github.com/EmbersArc) implementation on github! I ditched my implementation although it was nearly convergent.
