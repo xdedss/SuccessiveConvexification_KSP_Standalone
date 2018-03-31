@@ -48,7 +48,7 @@ w_B_max = np.deg2rad(60)
 # Angles
 cos_delta_max = np.cos(np.deg2rad(20))
 cos_theta_max = np.cos(np.deg2rad(90))
-tan_gamma_gs = np.tan(np.deg2rad(42))
+tan_gamma_gs = np.tan(np.deg2rad(20))
 
 # Angular moment of inertia
 J_B_I = 1e-2 * np.eye(3)
