@@ -1,6 +1,5 @@
 '''
     Ackimese & Szmuk : Successive Convexification for 6-DoF Mars Landing
-
         -> https://arxiv.org/abs/1802.03827
 
     FORKED FROM Sven Niederberger's implementation
@@ -259,8 +258,8 @@ for iteration in range(iterations):
     prob.solve(verbose=True, solver='ECOS')
     # CVX ----------------------------------------------------------------------------------------------------------
 
-    X = Xv.value
-    U = Uv.value
+    Xi = Xv.value
+    Ui = Uv.value
     sigma = sigmav.value
 
     delta_norm = np.linalg.norm(delta.value)

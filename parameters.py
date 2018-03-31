@@ -8,7 +8,7 @@ dt = 1 / (K - 1)
 # Max solver iterations
 iterations = 15
 
-# exponentially increase w_delta for iterations above 'start'
+# increase w_delta for iterations above 'start'
 # this puts major pressure on the dynamics trust region to converge
 force_converge = {
                     'active'  : False,
