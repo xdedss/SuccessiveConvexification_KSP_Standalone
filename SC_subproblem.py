@@ -27,11 +27,17 @@ def solve(params, params_super = None, codegen = False):
     delta_s =   Variable(1, 1, name='delta_s')
     
     #参数
-    A =         [Parameter(14, 14, name='A_%s'%i) for i in range(K)]
-    B =         [Parameter(14, 3, name='B_%s'%i) for i in range(K)]
-    C =         [Parameter(14, 3, name='C_%s'%i) for i in range(K)]
-    S =         [Parameter(14, 1, name='S_%s'%i) for i in range(K)]
-    z =         [Parameter(14, 1, name='z_%s'%i) for i in range(K)]
+#    A =         [Parameter(14, 14, name='A_%s'%i) for i in range(K)]
+#    B =         [Parameter(14, 3, name='B_%s'%i) for i in range(K)]
+#    C =         [Parameter(14, 3, name='C_%s'%i) for i in range(K)]
+#    S =         [Parameter(14, 1, name='S_%s'%i) for i in range(K)]
+#    z =         [Parameter(14, 1, name='z_%s'%i) for i in range(K)]
+    #暴力数组会超python255参数限制。。。
+    A =         Parameter(14 * K, 14, name='A')
+    B =         Parameter(14 * K, 3, name='B')
+    C =         Parameter(14 * K, 3, name='C')
+    S =         Parameter(14 * K, 1, name='S')
+    z =         Parameter(14 * K, 1, name='z')
     x_last      = Parameter(14, K, name='x_last')
     u_last      = Parameter(3, K, name='u_last')
     u_last_dir      = Parameter(3, K, name='u_last_dir')
@@ -52,12 +58,11 @@ def solve(params, params_super = None, codegen = False):
     T_min = Parameter(2, 1, name='T_min')
     
     if (not codegen): #填入实际参数
-        for i in range(K):
-            A[i].value = params.A[i]
-            B[i].value = params.B[i]
-            C[i].value = params.C[i]
-            S[i].value = params.S[i]
-            z[i].value = params.z[i]
+        A.value = params.A.reshape(K * 14, 14)
+        B.value = params.B.reshape(K * 14, 3)
+        C.value = params.C.reshape(K * 14, 3)
+        S.value = params.S.reshape(K * 14, 1)
+        z.value = params.z.reshape(K * 14, 1)
         x_last.value = params.x_last
         u_last.value = params.u_last
         u_last_dir.value = params.u_last_dir
@@ -106,7 +111,7 @@ def solve(params, params_super = None, codegen = False):
 #（2）动力学方程
     for k in range(K - 1):
         cons += [
-            x[:, k+1] == A[k]*x[:, k] + B[k]*u[:, k] + C[k]*u[:, k+1] + S[k]*s + z[k] + nu[:, k]
+            x[:, k+1] == A[14*k:14*(k+1),:]*x[:, k] + B[14*k:14*(k+1),:]*u[:, k] + C[14*k:14*(k+1),:]*u[:, k+1] + S[14*k:14*(k+1),:]*s + z[14*k:14*(k+1),:] + nu[:, k]
         ]
     
 #（3）状态限制
@@ -152,7 +157,7 @@ def solve(params, params_super = None, codegen = False):
     if (codegen):
         cpg.codegen(problem, codegen_path)
     else:
-        obj_opt = problem.solve(solver=ECOS, verbose=True)
+        obj_opt = problem.solve(solver=ECOS, verbose=False)
         return (obj_opt, 
             np.array(x.value), 
             np.array(u.value), 

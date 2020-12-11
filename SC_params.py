@@ -14,6 +14,9 @@ class SolverOptions:
         #exit condition
         self.nu_tol = 1e-8
         self.delta_tol = 1e-3
+        self.force_converge = True
+        self.force_converge_start = 4
+        self.force_converge_amount = 1e3
 
 class Params:
     def __init__(self, K): #K为时间步数
@@ -57,8 +60,8 @@ class VesselProfile:
         self.delta_max = None # gimbal
         self.T_min = None
         self.T_max = None
-        self.r_T_B = None
-        self.J_B_I = None
+        self.r_T_B = None # vector from COM to engine
+        self.J_B_I = None # inertia tensor
 
         self.time_guess = None
     

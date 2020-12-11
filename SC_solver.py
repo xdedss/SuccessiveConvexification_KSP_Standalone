@@ -4,13 +4,13 @@ from scipy.integrate import odeint
 import numpy as np
 import math
 from time import time
-import pickle
+import pickle, sys
 
 import SC_params
-from dynamics_functions import Dynamics
+from dynamics_functions_buffer import Dynamics
 
 
-def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, params_super=None, use_c = False):
+def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, params_super=None, use_c = False, verbose = False):
     if (params_super == None):
         params_super = SC_params.SuperParams()
     if (solver_options == None):
@@ -26,7 +26,8 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     K = params_super.K
     dt = 1 / (K - 1)
     iterations = params_super.iterations
-    
+    if (verbose):
+        print('K=%s, iterations=%s' % (K, iterations))
     
     params = SC_params.Params(K)
     #sparse
@@ -80,7 +81,8 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     
     
     for iteration in range(iterations):
-        print("Iteration", iteration + 1)
+        if (verbose):
+            print("Iteration", iteration + 1)
 
         start_time = time()
 
@@ -93,12 +95,12 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
             V0[idx[0] : idx[1]] = np.eye(14).reshape(-1)  # PhiA at initial step
 
             V = odeint(
-                            ode_dVdt,  # dV/dt function
-                            V0,        # initial value of the V container vector
-                            (0, dt),   # integrate over the time width of a step
-                            args = (params.u_last[:, k], params.u_last[:, k+1], params.s_last, dt,
-                                (matrix_functions.A, matrix_functions.B, matrix_functions.f) )
-                    )
+                    ode_dVdt,  # dV/dt function
+                    V0,        # initial value of the V container vector
+                    (0, dt),   # integrate over the time width of a step
+                    args = (params.u_last[:, k], params.u_last[:, k+1], params.s_last, dt,
+                        (matrix_functions.A, matrix_functions.B, matrix_functions.f) )
+            )
 
             V = np.array(V)[1, :]
             
@@ -113,24 +115,28 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
 
         #  weights are defined and imported from parameters.py
 
-#        if force_converge['active']:
-#            if iteration < force_converge['start']:
-#                w_delta_parm.value  =  w_delta
-#            else:
-#                w_delta_parm.value  =  w_delta * force_converge['amount']
-#        else:
-#            w_delta_parm.value = w_delta
+        if solver_options.force_converge:
+            if iteration < solver_options.force_converge_start:
+                params.w_delta = solver_options.w_delta
+            else:
+                params.w_delta = solver_options.w_delta * solver_options.force_converge_amount
+        else:
+            params.w_delta = solver_options.w_delta
 
         params.w_nu = solver_options.w_nu
-        params.w_delta = solver_options.w_delta
         params.w_delta_s = solver_options.w_delta_s
         
         params.check()
         
-        print("Solving problem. ", time() - start_time, "sec to integrate")
+        if (verbose):
+            print(time() - start_time, "sec to integrate")
+        start_time = time()
         
+        #solve
         res, x_res, u_res, s_res, nu_res, delta_res, delta_s_res = solver.solve(params, params_super)
-        # CVX ----------------------------------------------------------------------------------------------------------
+        
+        if (verbose):
+            print(time() - start_time, "sec to solve")
         
         params.x_last = x_res
         params.u_last = u_res
@@ -141,19 +147,29 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
 
         delta_norm = np.linalg.norm(delta_res)
         nu_norm = np.linalg.norm(nu_res, ord=1)
-
-        print("Flight time:", s_res, end = ' | ')
-        print("Delta_norm:", delta_norm, end = ' | ')
-        print("Nu_norm:", nu_norm)
+        
+        if (verbose):
+            print("Flight time:", s_res, end = ' | ')
+            print("Delta_norm:", delta_norm, end = ' | ')
+            print("Nu_norm:", nu_norm)
 
         if delta_norm < solver_options.delta_tol and nu_norm < solver_options.nu_tol:
-            print("Converged after", iteration + 1, "iterations!")
+            if (verbose):
+                print("Converged after", iteration + 1, "iterations!")
             break
     
     return x_res, u_res, s_res
 
 
+""" The start/end indexes of each variable in the vector V = XABCSz """
+idx  = [ 14 ]                # end of x (14,1)
+idx += [idx[0] + (14 * 14)]  # end of A (14,14)
+idx += [idx[1] + (14 * 3)]   # end of B (14,3)
+idx += [idx[2] + (14 * 3)]   # end of C (14,3)
+idx += [idx[3] + (14 * 1)]   # end of S (14,1)
+idx += [idx[4] + (14 * 1)]   # end of z (14,1)
 
+dV_dt = np.zeros( (idx[-1],) )
 def ode_dVdt(V, t, u_t, u_t1, sigma, dt, mat_funcs):
     ''' integrate the problem vector, which is defined as:
 
@@ -162,10 +178,12 @@ def ode_dVdt(V, t, u_t, u_t1, sigma, dt, mat_funcs):
 
         V has no correlation to v (velocity) except that it contains v inside
     '''
+    #print('ode_dVdt')
     A, B, f = mat_funcs
     
-    dV_dt = np.zeros( (idx[-1],) )
-
+    #dV_dt = np.zeros( (idx[-1],) )
+    dV_dt.fill(0)
+    
     alpha = (t / dt)
     beta = (1 - t / dt)
 
@@ -190,19 +208,19 @@ def ode_dVdt(V, t, u_t, u_t1, sigma, dt, mat_funcs):
     #print(dV_dt)
     return dV_dt
 
-""" The start/end indexes of each variable in the vector V = XABCSz """
-idx  = [ 14 ]                # end of x (14,1)
-idx += [idx[0] + (14 * 14)]  # end of A (14,14)
-idx += [idx[1] + (14 * 3)]   # end of B (14,3)
-idx += [idx[2] + (14 * 3)]   # end of C (14,3)
-idx += [idx[3] + (14 * 1)]   # end of S (14,1)
-idx += [idx[4] + (14 * 1)]   # end of z (14,1)
 
 if __name__ == '__main__':
+    use_c = False
+    if (len(sys.argv) > 1):
+        if ('codegen' in sys.argv[1]):
+            use_c = True
+    
+    print('以示例数据进行测试')
+    print('模式：%s' % ('cvxpy_codegen生成代码求解' if use_c else 'cvxpy直接求解'))
     x, u, tf = solve(SC_params.VesselProfile.get_default(), 
         SC_params.VesselState.get_default_initial(), 
-        SC_params.VesselState.get_default_final() )
-    
+        SC_params.VesselState.get_default_final(),
+        use_c=use_c, verbose=True)
     
     pickle.dump(x.T, open("trajectory/X.p", "wb"))
     pickle.dump(u.T, open("trajectory/U.p", "wb"))
