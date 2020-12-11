@@ -12,11 +12,11 @@ import SC_params
 
 #codegen时params为None，super必须提供 K
 #超参数贯穿整个codegen
-def solve(params, params_super, codegen = False):
+def solve(params, params_super = None, codegen = False):
     #super params
-    #K = params_super.K
-    K = 10
-    
+    if (params_super == None):
+        params_super = SC_params.SuperParams() # default
+    K = params_super.K
     
     #优化变量
     x =         Variable(14, K, name='x')
@@ -51,7 +51,7 @@ def solve(params, params_super, codegen = False):
     T_max = Parameter(2, 1, name='T_max')
     T_min = Parameter(2, 1, name='T_min')
     
-    if (not codegen):
+    if (not codegen): #填入实际参数
         for i in range(K):
             A[i].value = params.A[i]
             B[i].value = params.B[i]
@@ -146,20 +146,26 @@ def solve(params, params_super, codegen = False):
 # Problem
     problem = Problem(objective, cons)
     
-    print('is DCP: %s' % problem.is_dcp()) #检查是否符合凸优化规则
+    #print('is DCP: %s' % problem.is_dcp()) #检查是否符合凸优化规则
 
 # Solve or Codegen
     if (codegen):
         cpg.codegen(problem, codegen_path)
     else:
-        obj_opt = problem.solve(solver=ECOS, verbose=True, feastol=5e-20)
-        return (obj_opt, x.value, u.value, s.value) #tuple(结果，状态，控制，时间scale)
+        obj_opt = problem.solve(solver=ECOS, verbose=True)
+        return (obj_opt, 
+            np.array(x.value), 
+            np.array(u.value), 
+            s.value, 
+            np.array(nu.value), 
+            np.array(delta.value), 
+            delta_s.value) #tuple(结果，状态，控制，时间scale)
     
 
 if __name__ == '__main__':
     if (len(sys.argv) > 2 and sys.argv[1] == 'codegen'):
         codegen_path = sys.argv[2]
-        solve(None, SC_params.SuperParams(), True)
+        solve(None, None, True)
     else:
         print("invalid input")
         print(sys.argv)
