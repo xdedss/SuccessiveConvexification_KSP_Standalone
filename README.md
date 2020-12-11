@@ -7,11 +7,11 @@ Done: rewrite solver in cvxpy 0.4.11 & support codegen
 Todo: kRPC -> KSP
 
 # Requirements
-cvxpy                    0.4.11
-[cvxpy-codegen](https://github.com/moehle/cvxpy_codegen)            0.0.1  (Optional for codegen)
-scipy                   1.2.1
-numpy
-matplotlib (Optional for drawing result)
+cvxpy                    0.4.11  
+[cvxpy-codegen](https://github.com/moehle/cvxpy_codegen)            0.0.1  (Optional for codegen)  
+scipy                   1.2.1  
+numpy  
+matplotlib (Optional for drawing result)  
 
 # Run Test
 
