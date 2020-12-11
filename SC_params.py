@@ -1,11 +1,14 @@
 
 import numpy as np
 
+# 最外层的参数
+# 时间步数和迭代次数
 class SuperParams:
     def __init__(self):
         self.K = 70
         self.iterations = 15
 
+# 求解器相关参数
 class SolverOptions:
     def __init__(self):
         self.w_nu = 1e5
@@ -18,6 +21,7 @@ class SolverOptions:
         self.force_converge_start = 4
         self.force_converge_amount = 1e3
 
+# 直接传入求解器的参数（对应cvxpy.Parameter）
 class Params:
     def __init__(self, K): #K为时间步数
         self.A = np.zeros((K, 14, 14))
@@ -44,11 +48,8 @@ class Params:
         self.T_max = None
         self.T_min = None
     
-    def check(self):
-        #print(self.A)
-        pass
 
-
+# 飞行器相关内在参数
 class VesselProfile:
     def __init__(self):
         self.isp = None
@@ -65,7 +66,7 @@ class VesselProfile:
 
         self.time_guess = None
     
-    def get_default():
+    def get_default(): #测试用数据
         default_vessel = VesselProfile()
         default_vessel.isp = 10.194
         default_vessel.g = np.array((-1., 0., 0.)) # gravity
@@ -81,7 +82,7 @@ class VesselProfile:
         default_vessel.time_guess = 5.
         return default_vessel
         
-
+# 飞行器状态参数
 class VesselState:
     def __init__(self):
         self.mass = None
@@ -90,7 +91,7 @@ class VesselState:
         self.rotation = None
         self.omega = None
     
-    def get_default_initial():
+    def get_default_initial(): #测试用初态
         default_initial = VesselState()
         default_initial.mass = 2.0
         default_initial.pos = np.array([20., 5., 5.])
@@ -99,7 +100,7 @@ class VesselState:
         default_initial.omega = np.array([0., 0., 0.])
         return default_initial
     
-    def get_default_final():
+    def get_default_final(): #测试用末态
         default_final = VesselState()
         default_final.pos = np.array([0., 0., 0.])
         default_final.vel = np.array([0., 0., 0.])

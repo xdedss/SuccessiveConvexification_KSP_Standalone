@@ -11,6 +11,7 @@ from dynamics_functions_buffer import Dynamics
 
 
 def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, params_super=None, use_c = False, verbose = False):
+    #default
     if (params_super == None):
         params_super = SC_params.SuperParams()
     if (solver_options == None):
@@ -79,13 +80,14 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
         params.u_last[:, k] = xk[0, 0] * -vessel_profile.g  # hover
         params.u_last_dir[:, k] = -vessel_profile.g / np.linalg.norm(vessel_profile.g)  # thrust dir down
     
-    
+    #迭代求解
     for iteration in range(iterations):
         if (verbose):
             print("Iteration", iteration + 1)
 
         start_time = time()
-
+        
+        #准备每个时间步的矩阵A B C S z  过程中需要计算积分，耗时较长
         for k in range(0, K - 1):
 
             # find A_bar, B_bar, C_bar, Sigma_bar = S_bar, and z_bar
@@ -93,7 +95,8 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
             V0 = np.zeros( (idx[-1],) )
             V0[0      : idx[0]] = params.x_last[:, k]              # X at initial step
             V0[idx[0] : idx[1]] = np.eye(14).reshape(-1)  # PhiA at initial step
-
+            
+            #积分 V为xABCSZ拼合向量
             V = odeint(
                     ode_dVdt,  # dV/dt function
                     V0,        # initial value of the V container vector
@@ -111,40 +114,40 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
             params.C[k][:, :] = V[idx[2] : idx[3]].reshape((14, 3))
             params.S[k][:, 0] = V[idx[3] : idx[4]]
             params.z[k][:, 0] = V[idx[4] : idx[5]]
+        
+        if (verbose): #积分耗时
+            print(time() - start_time, "sec to integrate")
 
-
-        #  weights are defined and imported from parameters.py
-
+        #改变w_delta
         if solver_options.force_converge:
             if iteration < solver_options.force_converge_start:
                 params.w_delta = solver_options.w_delta
             else:
-                params.w_delta = solver_options.w_delta * solver_options.force_converge_amount
+                params.w_delta = solver_options.w_delta * solver_options.force_converge_amount # w_delta变大以促进delta收敛
         else:
             params.w_delta = solver_options.w_delta
 
         params.w_nu = solver_options.w_nu
         params.w_delta_s = solver_options.w_delta_s
         
-        params.check()
         
-        if (verbose):
-            print(time() - start_time, "sec to integrate")
         start_time = time()
         
         #solve
         res, x_res, u_res, s_res, nu_res, delta_res, delta_s_res = solver.solve(params, params_super)
         
-        if (verbose):
+        if (verbose): #凸优化耗时
             print(time() - start_time, "sec to solve")
         
+        # 这次迭代的结果作为下一次迭代的输入
         params.x_last = x_res
         params.u_last = u_res
         params.s_last = s_res
         for k in range(K):
             #print((params.u_last[:, k]).shape, np.linalg.norm(params.u_last[:, k]))
             params.u_last_dir[:, k] = params.u_last[:, k] / np.linalg.norm(params.u_last[:, k])
-
+        
+        # 收敛情况的评价指标
         delta_norm = np.linalg.norm(delta_res)
         nu_norm = np.linalg.norm(nu_res, ord=1)
         
@@ -152,12 +155,14 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
             print("Flight time:", s_res, end = ' | ')
             print("Delta_norm:", delta_norm, end = ' | ')
             print("Nu_norm:", nu_norm)
-
+        
+        #终止条件
         if delta_norm < solver_options.delta_tol and nu_norm < solver_options.nu_tol:
             if (verbose):
                 print("Converged after", iteration + 1, "iterations!")
             break
     
+    # 状态，控制，tf
     return x_res, u_res, s_res
 
 
@@ -169,7 +174,7 @@ idx += [idx[2] + (14 * 3)]   # end of C (14,3)
 idx += [idx[3] + (14 * 1)]   # end of S (14,1)
 idx += [idx[4] + (14 * 1)]   # end of z (14,1)
 
-dV_dt = np.zeros( (idx[-1],) )
+dV_dt = np.zeros( (idx[-1],) ) #buffer
 def ode_dVdt(V, t, u_t, u_t1, sigma, dt, mat_funcs):
     ''' integrate the problem vector, which is defined as:
 
