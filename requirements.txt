@@ -1,0 +1,5 @@
+matplotlib==2.2.3
+scipy==1.2.1
+numpy==1.17.4
+cvxpy==1.1.7
+cvxpy-codegen==0.0.1
