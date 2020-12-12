@@ -2,7 +2,7 @@
 
 from scipy.integrate import odeint
 import numpy as np
-from dynamics_functions import Dynamics
+from old.dynamics_functions import Dynamics
 #import sympy
 
 import SC_params
