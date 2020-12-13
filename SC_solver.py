@@ -33,10 +33,10 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     params = SC_params.Params(K)
     #sparse
     params.m_dry = vessel_profile.m_dry
-    params.cot_gamma_gs = 1 / math.tan(vessel_profile.gamma_gs)
+    params.tan_gamma_gs = math.tan(vessel_profile.gamma_gs)
     params.cos_theta_max = math.cos(vessel_profile.theta_max)
     params.omega_max = vessel_profile.omega_max
-    params.sec_delta_max = 1 / math.cos(vessel_profile.delta_max)
+    params.cos_delta_max = math.cos(vessel_profile.delta_max)
     params.T_min = vessel_profile.T_min
     params.T_max = vessel_profile.T_max
     

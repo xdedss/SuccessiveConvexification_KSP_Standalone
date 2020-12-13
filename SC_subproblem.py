@@ -50,10 +50,10 @@ def solve(params, params_super = None, codegen = False):
     x_final   = Parameter(14, 1, name='x_final')
     #sparse
     m_dry = Parameter(2, 1, name='m_dry')
-    cot_gamma_gs = Parameter(2, 1, name='cot_gamma_gs')
+    tan_gamma_gs = Parameter(2, 1, name='tan_gamma_gs', sign="positive")
     cos_theta_max = Parameter(2, 1, name='cos_theta_max')
     omega_max = Parameter(2, 1, name='omega_max')
-    sec_delta_max = Parameter(2, 1, name='sec_delta_max')
+    cos_delta_max = Parameter(2, 1, name='cos_delta_max', sign="positive")
     T_max = Parameter(2, 1, name='T_max')
     T_min = Parameter(2, 1, name='T_min')
     
@@ -75,10 +75,10 @@ def solve(params, params_super = None, codegen = False):
         x_final.value = params.x_final
         #sparse
         m_dry.value = [params.m_dry, 0]
-        cot_gamma_gs.value = [params.cot_gamma_gs, 0]
+        tan_gamma_gs.value = [params.tan_gamma_gs, 0]
         cos_theta_max.value = [params.cos_theta_max, 0]
         omega_max.value = [params.omega_max, 0]
-        sec_delta_max.value = [params.sec_delta_max, 0]
+        cos_delta_max.value = [params.cos_delta_max, 0]
         T_max.value = [params.T_max, 0]
         T_min.value = [params.T_min, 0]
     
@@ -118,7 +118,7 @@ def solve(params, params_super = None, codegen = False):
     for k in range(K):
         cons += [
             x[0, k] >= m_dry[0,0], #燃料耗尽
-            norm(x[2:4, k]) <= cot_gamma_gs[0,0] * x[1, k], #在锥内部
+            norm(x[2:4, k]) * tan_gamma_gs[0,0] <= x[1, k], #在锥内部
             cos_theta_max[0,0] <= 1 - 2 * sum_squares(x[9:11, k]), # 倾角
             norm(x[11:14, k]) <= omega_max[0,0], #角速度
         ]
@@ -129,7 +129,7 @@ def solve(params, params_super = None, codegen = False):
             #T_min[0,0] <= u_last_dir[:, k].T * u[:, k], #最小推力线性近似
             T_min[0,0] <= u_last_dir[0, k]*u[0, k] + u_last_dir[1, k]*u[1, k] + u_last_dir[2, k]*u[2, k], #点乘展开写
             norm(u[:, k]) <= T_max[0,0], #最大推力凸约束
-            norm(u[:, k]) <= sec_delta_max[0,0] * u[0, k], #gimbal限制
+            norm(u[:, k]) * cos_delta_max[0,0] <= u[0, k], #gimbal限制
         ]
     
 #（5）trust region

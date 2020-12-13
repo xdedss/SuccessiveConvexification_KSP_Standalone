@@ -32,17 +32,17 @@ def solve(params, params_super = None):
         x_final=params.x_final,
         #sparse
         m_dry=wrap(params.m_dry),
-        cot_gamma_gs=wrap(params.cot_gamma_gs),
+        tan_gamma_gs=wrap(params.tan_gamma_gs),
         cos_theta_max=wrap(params.cos_theta_max),
         omega_max=wrap(params.omega_max),
-        sec_delta_max=wrap(params.sec_delta_max),
+        cos_delta_max=wrap(params.cos_delta_max),
         T_max=wrap(params.T_max),
         T_min=wrap(params.T_min)
     )
     return (res, 
         np.array(res[0]['x']), 
         np.array(res[0]['u']), 
-        res[0]['s'], 
+        res[0]['s'][0,0], 
         np.array(res[0]['nu']), 
         np.array(res[0]['delta']), 
         res[0]['delta_s']) #tuple(结果，状态，控制，时间scale)

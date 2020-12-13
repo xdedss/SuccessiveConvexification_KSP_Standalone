@@ -41,10 +41,10 @@ class Params:
         self.x_final = np.zeros((14, 1))
         #sparse
         self.m_dry = None
-        self.cot_gamma_gs = None
+        self.tan_gamma_gs = None
         self.cos_theta_max = None
         self.omega_max = None
-        self.sec_delta_max = None
+        self.cos_delta_max = None
         self.T_max = None
         self.T_min = None
     
