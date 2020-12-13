@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 
-X_in = pickle.load(open("X.p", "rb"))
-U_in = pickle.load(open("U.p", "rb"))
 
-def plot_X():
+def plot_X(X_in, U_in):
 
     ''' state variable
                    0   1   2   3   4   5   6   7   8   9  10  11  12  13
@@ -92,7 +90,7 @@ def cIB(q):
 
     return cIB_m
 
-def plot_3D():
+def plot_3D(X_in, U_in):
 
     x = np.array(X_in)
     u = np.array(U_in)
@@ -129,5 +127,8 @@ def plot_3D():
     ax.set_aspect('equal')
     plt.show()
 
-plot_3D()
-plot_X()
+if __name__ == '__main__':
+    X_in = pickle.load(open("X.p", "rb"))
+    U_in = pickle.load(open("U.p", "rb"))
+    plot_3D(X_in, U_in)
+    plot_X(X_in, U_in)
