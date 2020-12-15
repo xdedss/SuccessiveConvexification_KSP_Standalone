@@ -25,7 +25,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     # super params
     K = params_super.K
     dt = 1 / (K - 1)
-    iterations = params_super.iterations
+    iterations = solver_options.iterations
     if (verbose):
         print('K=%s, iterations=%s' % (K, iterations))
     

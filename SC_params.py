@@ -6,11 +6,11 @@ import numpy as np
 class SuperParams:
     def __init__(self):
         self.K = 70
-        self.iterations = 15
 
 # 求解器相关参数
 class SolverOptions:
     def __init__(self):
+        self.iterations = 15
         self.w_nu = 1e5
         self.w_delta = 1e-3
         self.w_delta_s = 1e-1
