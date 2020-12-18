@@ -134,7 +134,7 @@ class Dynamics(object):
         cIB_m[2,1] = 2*(q2*q3 - q0*q1)
         cIB_m[2,2] = 1-2*(q1**2 + q2**2)
 
-        return cIB_m
+        return cIB_m.T
 
     def get(self, name, xi, ui, si):
 
@@ -294,12 +294,12 @@ if __name__ == '__main__':
 
     import numpy as np
 
-    constants = {}
-    constants['alpha'] = 0.1
-    constants['rTB'] = -1e-2 * np.array([1,0,0])
-    constants['J'] = 1e-2 * np.eye(3)
-    constants['g_I'] = np.array([ -1, 0, 0])  # inertial frame
+#    constants = {}
+#    constants['alpha'] = 0.1
+#    constants['rTB'] = -1e-2 * np.array([1,0,0])
+#    constants['J'] = 1e-2 * np.eye(3)
+#    constants['g_I'] = np.array([ -1, 0, 0])  # inertial frame
 
     d = Dynamics()
 
-    function_tests()
+#    function_tests()
