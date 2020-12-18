@@ -12,14 +12,11 @@ class SolverOptions:
     def __init__(self):
         self.iterations = 15
         self.w_nu = 1e5
-        self.w_delta = 1e-3
+        self.w_delta = lambda i:(1e-3 if i <= 4 else 1)
         self.w_delta_s = 1e-1
         #exit condition
         self.nu_tol = 1e-8
         self.delta_tol = 1e-3
-        self.force_converge = True
-        self.force_converge_start = 4
-        self.force_converge_amount = 1e3
 
 # 直接传入求解器的参数（对应cvxpy.Parameter）
 class Params:
@@ -107,3 +104,30 @@ class VesselState:
         default_final.rotation = np.array([1.0, 0.0, 0.0, 0.0])
         default_final.omega = np.array([0., 0., 0.])
         return default_final
+
+
+def normalize(vessel, Ut, Ul, Um):
+    if (isinstance(vessel, VesselState)):
+        res = VesselState()
+        res.mass = vessel.mass / Um
+        res.pos = vessel.pos / Ul
+        res.vel = vessel.vel / (Ul / Ut)
+        res.rotation = vessel.rotation
+        res.omega = vessel.omega * Ut
+    elif (isinstance(vessel, VesselProfile)):
+        res = VesselProfile()
+        res.isp = vessel.isp / (Ul / Ut)
+        res.g = vessel.g / (Ul / Ut**2)
+        res.m_dry = vessel.m_dry / Um
+        res.gamma_gs = vessel.gamma_gs
+        res.theta_max = vessel.theta_max
+        res.omega_max = vessel.omega_max * Ut
+        res.delta_max = vessel.delta_max
+        res.T_min = vessel.T_min / (Um * Ul / Ut**2)
+        res.T_max = vessel.T_max / (Um * Ul / Ut**2)
+        res.r_T_B = vessel.r_T_B / Ul
+        res.J_B_I = vessel.J_B_I / (Um * Ul**2)
+        res.time_guess = vessel.time_guess / Ut
+    else:
+        return None
+    return res

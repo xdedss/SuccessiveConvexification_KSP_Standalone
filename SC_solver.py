@@ -58,7 +58,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     params.s_last = vessel_profile.time_guess
     
     # solver options 凸优化目标函数里各部分权重
-    params.w_delta = solver_options.w_delta
+    #params.w_delta = solver_options.w_delta
     params.w_nu = solver_options.w_nu
     params.w_delta_s = solver_options.w_delta_s
 
@@ -93,14 +93,19 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
             print(time() - start_time, "sec to integrate")
         
 
-        # 令w_delta随着迭代数变大
-        if solver_options.force_converge:
-            if iteration < solver_options.force_converge_start:
-                params.w_delta = solver_options.w_delta
-            else:
-                params.w_delta = solver_options.w_delta * solver_options.force_converge_amount # w_delta变大以促进delta收敛
+        # 令w_delta随着迭代数改变
+        if isinstance(solver_options.w_delta, type(lambda:0)):
+            params.w_delta = solver_options.w_delta(iteration)
         else:
             params.w_delta = solver_options.w_delta
+         
+#        if solver_options.force_converge:
+#            if iteration < solver_options.force_converge_start:
+#                params.w_delta = solver_options.w_delta
+#            else:
+#                params.w_delta = solver_options.w_delta * solver_options.force_converge_amount # w_delta变大以促进delta收敛
+#        else:
+#            params.w_delta = solver_options.w_delta
         
         #（2）求解凸优化子问题
         start_time = time()
