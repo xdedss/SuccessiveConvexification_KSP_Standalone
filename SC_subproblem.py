@@ -91,7 +91,7 @@ def solve(params, params_super = None, codegen = False):
         x[0, 0]     == x_initial[0, 0], # mass
         x[1:4, 0]   == x_initial[1:4, 0], # position
         x[4:7, 0]   == x_initial[4:7, 0], # velocity
-        # x[7:11, 0]  == x_initial[7:11, 0], # quanternion
+        x[7:11, 0]  == x_initial[7:11, 0], # quanternion 更改：初态姿态固定
         x[11:14, 0] == x_initial[11:14, 0], # angular vel
     ]
     #结束
@@ -99,7 +99,7 @@ def solve(params, params_super = None, codegen = False):
         # x[0, K-1]     == x_final[0, 0], # mass
         x[1:4, K-1]   == x_final[1:4, 0], # position
         x[4:7, K-1]   == x_final[4:7, 0], # velocity
-        x[7:11, K-1]  == x_final[7:11, 0], # quanternion
+        #x[7:11, K-1]  == x_final[7:11, 0], # quanternion
         x[11:14, K-1] == x_final[11:14, 0], # angular vel
     ]
     #thrust最后朝下
@@ -122,6 +122,9 @@ def solve(params, params_super = None, codegen = False):
             cos_theta_max[0,0] <= 1 - 2 * sum_squares(x[9:11, k]), # 倾角
             norm(x[11:14, k]) <= omega_max[0,0], #角速度
         ]
+    cons += [0 == x[9:11, K-1]] # 规定最终头朝上但是滚转轴随意  即四元数jk分量为0
+    #cons += [0 == x[8, 0]]
+    cons += [s >= 0]
     
 #（4）输入量（推力）限制
     for k in range(K):
