@@ -62,7 +62,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     params.w_nu = solver_options.w_nu
     params.w_delta_s = solver_options.w_delta_s
 
-    integrator = Integrator(vessel_profile, params_super)
+    integrator = Integrator(vessel_profile, params_super, use_c=False) #use_c is WIP don't use
     
     #  initial guess
     for k in range(K):
