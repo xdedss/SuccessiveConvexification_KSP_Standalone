@@ -51,7 +51,7 @@ def solve(params, params_super = None, codegen = False):
     #sparse
     m_dry = Parameter(2, 1, name='m_dry')
     tan_gamma_gs = Parameter(2, 1, name='tan_gamma_gs', sign="positive")
-    cos_theta_max = Parameter(2, 1, name='cos_theta_max')
+    cos_theta_max = Parameter(1, K, name='cos_theta_max')
     omega_max = Parameter(2, 1, name='omega_max')
     cos_delta_max = Parameter(2, 1, name='cos_delta_max', sign="positive")
     T_max = Parameter(2, 1, name='T_max')
@@ -76,7 +76,7 @@ def solve(params, params_super = None, codegen = False):
         #sparse
         m_dry.value = [params.m_dry, 0]
         tan_gamma_gs.value = [params.tan_gamma_gs, 0]
-        cos_theta_max.value = [params.cos_theta_max, 0]
+        cos_theta_max.value = [params.cos_theta_max, 0] if type(params.cos_theta_max)!=np.ndarray else params.cos_theta_max
         omega_max.value = [params.omega_max, 0]
         cos_delta_max.value = [params.cos_delta_max, 0]
         T_max.value = [params.T_max, 0]
@@ -119,7 +119,7 @@ def solve(params, params_super = None, codegen = False):
         cons += [
             x[0, k] >= m_dry[0,0], #燃料耗尽
             norm(x[2:4, k]) * tan_gamma_gs[0,0] <= x[1, k], #在锥内部
-            cos_theta_max[0,0] <= 1 - 2 * sum_squares(x[9:11, k]), # 倾角
+            cos_theta_max[0,k] <= 1 - 2 * sum_squares(x[9:11, k]), # 倾角
             norm(x[11:14, k]) <= omega_max[0,0], #角速度
         ]
     cons += [0 == x[9:11, K-1]] # 规定最终头朝上但是滚转轴随意  即四元数jk分量为0

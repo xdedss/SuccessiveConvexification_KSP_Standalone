@@ -13,6 +13,7 @@ def solve(params, params_super = None):
     if (params_super == None):
         params_super = SC_params.SuperParams() # default
     K = params_super.K
+   
     
     res = sc_subproblem_solver.cg_solve(
         A=params.A.reshape(K * 14, 14),
@@ -33,7 +34,7 @@ def solve(params, params_super = None):
         #sparse
         m_dry=wrap(params.m_dry),
         tan_gamma_gs=wrap(params.tan_gamma_gs),
-        cos_theta_max=wrap(params.cos_theta_max),
+        cos_theta_max=(np.array([params.cos_theta_max] * K) if type(params.cos_theta_max)!=np.ndarray else params.cos_theta_max).reshape(1, K),
         omega_max=wrap(params.omega_max),
         cos_delta_max=wrap(params.cos_delta_max),
         T_max=wrap(params.T_max),

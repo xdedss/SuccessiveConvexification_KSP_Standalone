@@ -42,7 +42,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     #sparse
     params.m_dry = vessel_profile.m_dry
     params.tan_gamma_gs = math.tan(vessel_profile.gamma_gs)
-    params.cos_theta_max = math.cos(vessel_profile.theta_max)
+    params.cos_theta_max = np.cos(vessel_profile.theta_max)
     params.omega_max = vessel_profile.omega_max
     params.cos_delta_max = math.cos(vessel_profile.delta_max)
     params.T_min = vessel_profile.T_min
