@@ -26,6 +26,7 @@ class Integrator:
                 'g_I'  : vessel_profile.g,
                 'rTB'  : vessel_profile.r_T_B,
                 'J'    : vessel_profile.J_B_I,
+                'airfric_k' : vessel_profile.airfric_k,
             }
         
         self.matrix_functions = Dynamics()
@@ -34,6 +35,7 @@ class Integrator:
             'g_I'  : vessel_profile.g,
             'rTB'  : vessel_profile.r_T_B,
             'J'    : vessel_profile.J_B_I,
+            'airfric_k' : vessel_profile.airfric_k,
         })
         self.dt = 1 / (params_super.K - 1)
         

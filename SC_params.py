@@ -2,7 +2,7 @@
 import numpy as np
 
 # 最外层的参数
-# 时间步数和迭代次数
+# 时间步数
 class SuperParams:
     def __init__(self):
         self.K = 70
@@ -60,6 +60,7 @@ class VesselProfile:
         self.T_max = None
         self.r_T_B = None # vector from COM to engine
         self.J_B_I = None # inertia tensor
+        self.airfric_k = None # air friction
 
         self.time_guess = None
     
@@ -109,7 +110,8 @@ class VesselState:
 def normalize(vessel, Ut, Ul, Um):
     if (isinstance(vessel, VesselState)):
         res = VesselState()
-        res.mass = vessel.mass / Um
+        if vessel.mass != None:
+            res.mass = vessel.mass / Um
         res.pos = vessel.pos / Ul
         res.vel = vessel.vel / (Ul / Ut)
         res.rotation = vessel.rotation
@@ -127,6 +129,7 @@ def normalize(vessel, Ut, Ul, Um):
         res.T_max = vessel.T_max / (Um * Ul / Ut**2)
         res.r_T_B = vessel.r_T_B / Ul
         res.J_B_I = vessel.J_B_I / (Um * Ul**2)
+        res.airfric_k = vessel.airfric_k / (Um / Ul)
         res.time_guess = vessel.time_guess / Ut
     else:
         return None

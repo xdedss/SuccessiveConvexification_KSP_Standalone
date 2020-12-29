@@ -53,6 +53,7 @@ class Dynamics(object):
             alpha = symbols('alpha')
             rTB = Matrix(symbols('rTB0 rTB1 rTB2'))
             g = Matrix(symbols('gx gy gz'))
+            airfric_k = symbols('airfric_k')
 
             J = sympy.zeros(3,3)
             J[0,0] = symbols('J00')
@@ -71,7 +72,8 @@ class Dynamics(object):
         self.f[1:4,:]   = (v) # dr/dt = velocity
 
         # dv/dt = gravity + (pointed thrust)/mass
-        self.f[4:7,:]   = (1./m) * self.cIB(q) * self.u + g
+        air_friction    = -v * sympy.sqrt(v[0]**2 + v[1]**2 + v[2]**2) * airfric_k
+        self.f[4:7,:]   = (1./m) * (self.cIB(q) * self.u + air_friction) + g
         self.f[7:11,:]  = (1./2.) * self.Om(w) * q
 
         # J.T == J.inv() due to orthogonality
@@ -207,6 +209,7 @@ class Dynamics(object):
                                     "alpha = self.alpha",
                                     "gx, gy, gz = self.g_I",
                                     "rTB0, rTB1, rTB2 = self.rTB",
+                                    "airfric_k = self.airfric_k",
                 ]
 
                 for v in variables_unpacking:
