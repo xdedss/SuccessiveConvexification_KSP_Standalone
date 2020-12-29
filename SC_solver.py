@@ -16,6 +16,14 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     if (solver_options == None):
         solver_options = SC_params.SolverOptions()
     
+    #normalize
+    Ut = vessel_profile.time_guess / 5.
+    Ul = vessel_initial.pos[0] / 20.
+    Um = vessel_initial.mass / 1.5
+    vessel_profile = SC_params.normalize(vessel_profile, Ut, Ul, Um)
+    vessel_initial = SC_params.normalize(vessel_initial, Ut, Ul, Um)
+    vessel_final = SC_params.normalize(vessel_final, Ut, Ul, Um)
+    
     # solver
     if (use_c):
         import SC_subproblem_gen as solver
@@ -135,6 +143,14 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
                 print("Converged after", iteration + 1, "iterations!")
             break
     
+    
+    #inv normalization
+    x_res[0,   :] *= Um
+    x_res[1:4, :] *= Ul
+    x_res[4:7, :] *= Ul / Ut
+    x_res[11:14, 0] *= 1. / Ut
+    u_res *= Um * Ul / Ut**2
+    s_res *= Ut
     #返回 状态，控制，tf
     return x_res, u_res, s_res
 
