@@ -3,6 +3,6 @@ __pycache__
 *.m~
 pdf
 
-
+gfold_subproblem_codegen/
 sc_subproblem_codegen/
 sc_integrator_codegen/

@@ -29,6 +29,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
         import SC_subproblem_gen as solver
     else:
         import SC_subproblem as solver
+    import GFOLD_solver, GFOLD_params
     
     # super params
     K = params_super.K
@@ -72,19 +73,30 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
 
     integrator = Integrator(vessel_profile, params_super, use_c=False) #use_c is WIP don't use
     
-    #  initial guess
+    #  initial guess with GFOLD
+    if (verbose):
+        print('solving GFOLD for initial guess')
+    x_guess, u_guess, m_guess = GFOLD_solver.solve(vessel_profile, vessel_initial, vessel_final, use_c=False, verbose=verbose)
+    k_space = np.linspace(0, K-1, GFOLD_params.SuperParams().N)
     for k in range(K):
 
-        alpha1 = (K - k) / K
-        alpha2 = (k / K)
+#        alpha1 = (K - k) / K
+#        alpha2 = (k / K)
+        #xk = params.x_initial * alpha1 + params.x_final * alpha2
         
-        #x_k 和 x_k+1 两个时间点之间的线性插值
-        xk = params.x_initial * alpha1 + params.x_final * alpha2
+        xk = np.zeros((14, 1))
         xk[7:11, 0] = np.array([1.0, 0.0, 0.0, 0.0])
-        #print(xk)
+        xk[0, 0] = np.interp(k, k_space, m_guess[0, :])#m_guess[0, k]
+        for l_i in range(1, 7):
+            xk[l_i, 0] = np.interp(k, k_space, x_guess[l_i-1, :])
+        uk = np.zeros((3, 1))
+        for l_i in range(3):
+            uk[l_i, 0] = np.linalg.norm(np.interp(k, k_space, u_guess[l_i, :]))
         params.x_last[:, k] = xk[:, 0]
-        params.u_last[:, k] = xk[0, 0] * -vessel_profile.g  # hover
-        params.u_last_dir[:, k] = -vessel_profile.g / np.linalg.norm(vessel_profile.g)  # thrust dir down
+        #params.u_last[:, k] = xk[0, 0] * -vessel_profile.g  # hover
+        #params.u_last_dir[:, k] = -vessel_profile.g / np.linalg.norm(vessel_profile.g)  # thrust dir down
+        params.u_last[:, k] = np.array([np.linalg.norm(uk), 0, 0])
+        params.u_last_dir[:, k] = params.u_last[:, k] / np.linalg.norm(params.u_last[:, k])
     
     #迭代求解
     for iteration in range(iterations):
