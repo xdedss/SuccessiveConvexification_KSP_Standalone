@@ -146,7 +146,8 @@ def solve(params, params_super = None, codegen = False):
     
 # Objective:
     objective = Minimize(
-        s + w_nu[0,0]      * norm(nu, 1)  # virtual control（1范数）
+        -x[0,K-1]
+          + w_nu[0,0]      * norm(nu, 1)  # virtual control（1范数）
           + w_delta[0,0]   * norm(delta)   # trust region on dynamics（2范数）
           + w_delta_s[0,0] * norm(delta_s, 1)  # trust region on sigma（1范数）
     )
