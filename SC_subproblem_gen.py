@@ -4,6 +4,8 @@
 import sc_subproblem_solver
 import numpy as np
 
+import SC_params
+
 def wrap(v):
     return np.matrix([[v], [0]])
 
