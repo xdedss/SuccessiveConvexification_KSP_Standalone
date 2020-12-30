@@ -1,0 +1,60 @@
+
+#环境参数
+g0 = 9.807 #重力加速度
+airfric_k = 14   #空气阻力 f=k*v^2 自己测
+
+start_altitude = 1420
+predict_altitude = 1400
+hop_altitude = 4500 # 
+hop_vel = 140
+
+#求解条件
+tf_guess = 25 #预估落地所需时间/秒
+
+#目标参数
+target_lat = -0.0967791065 # 纬度/度
+target_lon = -74.617390900 # 经度/度
+target_height = 6 # surface height 从质心算
+
+#限制参数
+throttle_limit = [0.2, 0.8] #规划时节流阀限制
+throttle_limit_ctrl = [0.05, 0.9] #实际执行时节流阀限制
+
+gamma_gs = 10 #最小下降角度（圆锥形限制区域的母线与地面夹角）
+max_tilt = 90  #倾斜 度
+max_tilt_off = 45  #倾斜 度
+max_omega = 60 #角速度 度/s
+max_delta = 10 #gimbal限制 度
+
+#靠舵面调姿pid
+ctrl_fall_pitch.kp = 1.0
+ctrl_fall_pitch.kd = 2.0
+ctrl_fall_pitch.ki = 1.0
+ctrl_fall_pitch.integral_limit = 0.2
+ctrl_fall_yaw.kp = 1.5
+ctrl_fall_yaw.kd = 2
+ctrl_fall_distance.kp = 1.0
+ctrl_fall_distance.kd = 10.0
+ctrl_fall_distance_target = 250 # 预留水平距离/m
+
+#姿态控制所用PID参数
+ctrl_x_rot.kp = 4
+ctrl_x_rot.kd = 4.5
+ctrl_y_avel_kp = 4 #y为滚转
+ctrl_z_rot.kp = 4
+ctrl_z_rot.kd = 4.5
+
+#滑行中调整控制速度和位置所用PID参数
+k_x = 0.3 #p
+k_v = 0.8 #d
+
+#最终降落段
+#进入目标附近圆柱区域时会切换控制模式
+final_height = 80 #触发区域高度
+final_radius = 30 #触发区域半径
+final_throttle = 0.8
+final_kp = 1
+
+
+#debug
+debug_lines = True
