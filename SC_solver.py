@@ -78,7 +78,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
         print('solving GFOLD for initial guess')
     x_guess, u_guess, m_guess = None, None, None
     for i in range(10): # gfold until feasible
-        x_guess, u_guess, m_guess = GFOLD_solver.solve(vessel_profile, vessel_initial, vessel_final, use_c=True, verbose=verbose)
+        x_guess, u_guess, m_guess = GFOLD_solver.solve(vessel_profile, vessel_initial, vessel_final, use_c=use_c, verbose=verbose)
         if type(x_guess) == type(None):
             vessel_profile.time_guess *= 1.2
             if (verbose):

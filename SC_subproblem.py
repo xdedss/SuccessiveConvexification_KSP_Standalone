@@ -76,7 +76,7 @@ def solve(params, params_super = None, codegen = False):
         #sparse
         m_dry.value = [params.m_dry, 0]
         tan_gamma_gs.value = [params.tan_gamma_gs, 0]
-        cos_theta_max.value = [params.cos_theta_max, 0] if type(params.cos_theta_max)!=np.ndarray else params.cos_theta_max
+        cos_theta_max.value = np.array([params.cos_theta_max] * K).reshape(1, K) if type(params.cos_theta_max)!=np.ndarray else params.cos_theta_max
         omega_max.value = [params.omega_max, 0]
         cos_delta_max.value = [params.cos_delta_max, 0]
         T_max.value = [params.T_max, 0]

@@ -77,6 +77,7 @@ class VesselProfile:
         default_vessel.T_max = 5.0
         default_vessel.r_T_B = np.array((-1e-2, 0., 0.))
         default_vessel.J_B_I = 1e-2 * np.eye(3)
+        default_vessel.airfric_k = 0
         default_vessel.time_guess = 5.
         return default_vessel
         
