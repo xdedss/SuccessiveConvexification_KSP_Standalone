@@ -41,6 +41,8 @@ flight = vessel.flight()
 body = vessel.orbit.body
 
 engine_gimbal = [m for m in vessel.parts.with_name('SSME')[0].modules if m.name == 'ModuleGimbal'][0]
+# StarShip Main Engine(大雾)
+engine_y = vessel.parts.with_name('SSME')[0].position(vessel.reference_frame)[1]
 
 # starship flap
 get_hinge = lambda tagname:[m for m in vessel.parts.with_tag(tagname)[0].modules if m.name=='ModuleRoboticServoHinge'][0]
@@ -112,8 +114,6 @@ max_tilt_off = np.deg2rad(params['max_tilt_off'])
 
 # krpc vessel对象生成vesselprofile
 def get_vessel_profile(vessel):
-    # StarShip Main Engine(大雾)
-    engine_y = vessel.parts.with_name('SSME')[0].position(vessel.reference_frame)[1]
     
     p = SC_params.VesselProfile()
     p.isp = vessel.specific_impulse
