@@ -137,7 +137,7 @@ def solve(params, params_super = None, codegen = False, verbose=False):
             np.array(x.value), # r,v
             np.array(u.value), # u (acceleration)
             np.exp(np.array(z.value)) # mass
-        )
+        ) if type(x.value) != type(None) else (None, None, None, None)
 
 if __name__ == '__main__':
     if (len(sys.argv) > 2 and sys.argv[1] == 'codegen'):

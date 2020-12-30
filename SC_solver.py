@@ -76,8 +76,17 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
     #  initial guess with GFOLD
     if (verbose):
         print('solving GFOLD for initial guess')
-    x_guess, u_guess, m_guess = GFOLD_solver.solve(vessel_profile, vessel_initial, vessel_final, use_c=False, verbose=verbose)
-    k_space = np.linspace(0, K-1, GFOLD_params.SuperParams().N)
+    x_guess, u_guess, m_guess = None, None, None
+    for i in range(10): # gfold until feasible
+        x_guess, u_guess, m_guess = GFOLD_solver.solve(vessel_profile, vessel_initial, vessel_final, use_c=True, verbose=verbose)
+        if type(x_guess) == type(None):
+            vessel_profile.time_guess *= 1.2
+            if (verbose):
+                print('GFOLD retry %s, tf=%s' % (i+1, vessel_profile.time_guess))
+        else:
+            break
+    k_space = np.linspace(0, K-1, GFOLD_params.SuperParams().N) # for interpolation in case N != K
+    params.s_last = vessel_profile.time_guess
     for k in range(K):
 
 #        alpha1 = (K - k) / K
@@ -97,6 +106,7 @@ def solve(vessel_profile, vessel_initial, vessel_final, solver_options=None, par
         #params.u_last_dir[:, k] = -vessel_profile.g / np.linalg.norm(vessel_profile.g)  # thrust dir down
         params.u_last[:, k] = np.array([np.linalg.norm(uk), 0, 0])
         params.u_last_dir[:, k] = params.u_last[:, k] / np.linalg.norm(params.u_last[:, k])
+    x_res, u_res, s_res = params.x_last, params.u_last, params.s_last
     
     #迭代求解
     for iteration in range(iterations):
