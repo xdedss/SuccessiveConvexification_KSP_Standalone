@@ -14,6 +14,7 @@ from threading import Thread
 
 print('--------')
 
+# 读取KSP_controller_params.txt中的参数
 params = {}
 with open('KSP_controller_params.txt', 'r', encoding='utf-8') as f:
     for line in f:
@@ -23,11 +24,13 @@ with open('KSP_controller_params.txt', 'r', encoding='utf-8') as f:
             value = eval(pair[1])
             params[key] = value
 
+#打印参数
 print('----------params------------')
 for k in (params):
     print('  %s: \n%s' % (k, params[k]))
 print('\n\ninitializing...')
 
+#常量
 deg2rad = math.pi / 180
 rad2deg = 180 / math.pi
 g0 = params['g0']
@@ -40,6 +43,7 @@ vessel = space_center.active_vessel
 flight = vessel.flight()
 body = vessel.orbit.body
 
+#控制相关
 engine_gimbal = [m for m in vessel.parts.with_name('SSME')[0].modules if m.name == 'ModuleGimbal'][0]
 # StarShip Main Engine(大雾)
 engine_y = vessel.parts.with_name('SSME')[0].position(vessel.reference_frame)[1]
@@ -98,7 +102,7 @@ def retract_flaps():
 
 delta_time = 0.01
 
-#target
+#target 经纬度转地固系
 target_lat = params['target_lat'] * deg2rad
 target_lon = params['target_lon'] * deg2rad
 target_height = params['target_height']
@@ -153,6 +157,7 @@ def predict_vessel_state(vessel, est_height):
     state.omega = vec(0, 0, 0)
     return state
 
+# 最后一段预留final_height垂直下落，反推末端状态
 def get_final_state(vessel, final_height):
     optimal_acc = vessel.available_thrust / vessel.mass * params['final_throttle'] - g0
     final_vel = math.sqrt(2 * optimal_acc * final_height)
@@ -165,6 +170,7 @@ def get_final_state(vessel, final_height):
     state.omega = vec(0, 0, 0)
     return state
 
+# -------各种PID控制器初始化----------
 #fall attitude
 ctrl_fall_pitch = PID()
 ctrl_fall_pitch.kp = params['ctrl_fall_pitch.kp']
@@ -209,28 +215,28 @@ start_time = time.time()
 # references
 print('creating target frame...')
 ref_local = vessel.reference_frame 
-ref_surface = vessel.surface_reference_frame #地面参考系
-ref_body = body.reference_frame
-ref_target_temp = space_center.ReferenceFrame.create_relative(ref_body, position=target_body_pos)
-ref_target = space_center.ReferenceFrame.create_hybrid(ref_target_temp, rotation=ref_surface, velocity=ref_target_temp)
+ref_surface = vessel.surface_reference_frame #地面参考系 原点为载具质心
+ref_body = body.reference_frame #地固系
+ref_target_temp = space_center.ReferenceFrame.create_relative(ref_body, position=target_body_pos) #地固系原点平移到目标位置
+ref_target = space_center.ReferenceFrame.create_hybrid(ref_target_temp, rotation=ref_surface, velocity=ref_target_temp) #混合坐标系 原点在目标处，旋转同地面系（Up-North-East）
 
 prev_vel = vec(vessel.velocity(ref_surface))
 K = SC_params.SuperParams().K
 solved_path = None
 n_i = -1
 error = vec(vessel.position(ref_target))
-print('current error: %s' % error)
+#print('current error: %s' % error)
 debug_lines = params['debug_lines']
 if debug_lines:
     print('debug lines...')
-    lines = [conn.drawing.add_line((0,0,0),(0,0,0), ref_target) for i in range(K-1)]
-    directions = [conn.drawing.add_line((0,0,0), (1,0,0), ref_target) for i in range(K)]
-    thrustvecs = [conn.drawing.add_line((0,0,0), (1,0,0), ref_target) for i in range(K)]
-    target_line = conn.drawing.add_line((0,0,0),(1,0,0),ref_target)
+    lines = [conn.drawing.add_line((0,0,0),(0,0,0), ref_target) for i in range(K-1)] #轨迹线
+    directions = [conn.drawing.add_line((0,0,0), (1,0,0), ref_target) for i in range(K)] #机头指向
+    thrustvecs = [conn.drawing.add_line((0,0,0), (1,0,0), ref_target) for i in range(K)] #推力指向
+    target_line = conn.drawing.add_line((0,0,0),(1,0,0),ref_target) #轨迹采样标记
     target_line.color = (0,0,1)
-    target2_line = conn.drawing.add_line((0,0,0),(1,0,0),ref_target)
+    target2_line = conn.drawing.add_line((0,0,0),(1,0,0),ref_target) #提前采样
     target2_line.color = (0,0,1)
-    head_line = conn.drawing.add_line((0,0,0),(1,0,0),ref_target)
+    head_line = conn.drawing.add_line((0,0,0),(1,0,0),ref_target) #目标姿态指向
     head_line.color = (0,1,1)
     for line in directions:
         line.color = (1,0,0)
@@ -253,6 +259,7 @@ def update_lines(x, u):
         thrustvecs[i].start = x[1:4, i]
         thrustvecs[i].end = x[1:4, i] - transform(u[:, i], mat) / m_u * 10
 
+#找到轨迹最近点
 def find_nearest_index(rk, vk, error):
     nearest_mag = npl.norm(rk[:, 0] - error)
     nearest_i = 0
@@ -267,6 +274,7 @@ def find_nearest_index(rk, vk, error):
     frac = clamp(np.dot(error - rk[:, nearest_i], v_dir) / (tf / K * v_norm), 0.5, -0.5)
     return nearest_i + frac
 
+#轨迹采样
 def sample_index(index, rk, vk, qk, uk):
     #if index >= N-1:
     if index >= K-1:
@@ -288,6 +296,7 @@ def sample_index(index, rk, vk, qk, uk):
         #print('u_i_s ' + str(u[:, 1]))
     return (r_i_s.copy(), v_i_s.copy(), q_i_s.copy(), u_i_s.copy())
 
+#限制在圆台区域内
 def conic_clamp(target_a, min_mag, max_mag, max_tilt):
     a_mag = npl.norm(target_a)
     hor_dir = v3(0, target_a[1], target_a[2])
@@ -312,6 +321,7 @@ def conic_clamp(target_a, min_mag, max_mag, max_tilt):
     
     return hor_dir * a_hor + v3(a_ver, 0, 0)
 
+#求解路径 放入全局变量solved_path
 def solve_path(vessel_profile, vessel_state, vessel_final_state):
     global solved_path, n_i
     print('----------vessel_profile(original)------------')
@@ -349,7 +359,7 @@ def solve_path(vessel_profile, vessel_state, vessel_final_state):
         print('---------solve error----------')
 
 print('---------loop start-------------')
-combine_flaps(0, 0)
+combine_flaps(0, 0) #fin放到自然状态
 while True:
     time.sleep(delta_time)
     real_time = time.time() - start_time
@@ -376,9 +386,9 @@ while True:
         
     if nav_mode == 'launch': #跳到一定高度
         balanced_thr = mass * g0 / max_thrust
-        target_direction = v3(1, 0.02, 0) #偏北一点
+        target_direction = v3(1, 0.02, 0) #偏一点
         #print(target_direction)
-        vessel.control.throttle = balanced_thr + (params['hop_vel'] - npl.norm(vel)) * 0.05
+        vessel.control.throttle = balanced_thr + (params['hop_vel'] - npl.norm(vel)) * 0.05 #比例反馈控制
         #print(error[0])
         if (error[0] > params['hop_altitude']):
             nav_mode = 'transit'
@@ -386,26 +396,26 @@ while True:
     elif nav_mode == 'transit': #减弱推力直到垂直速度为负
         balanced_thr = mass * g0 / max_thrust
         target_direction = v3(1, 0, 0)
-        vessel.control.throttle = balanced_thr * 0.25
+        vessel.control.throttle = balanced_thr * 0.25 #保持0.25TWR
         if (vel[0] < -10):
             vessel.control.rcs = False
-            vessel.control.pitch = -1
+            vessel.control.pitch = -1 # pitch down
             time.sleep(1) #保持一秒
             vessel.control.pitch = 0
             vessel.control.throttle = 0
             nav_mode = 'fall'
             print('fall')
     elif nav_mode == 'fall': # 下落阶段 翼面控制姿态
-        pitch_target = clamp(ctrl_fall_distance.update((math.sqrt(error[2]**2 + error[1]**2) - params['ctrl_fall_distance_target']) / 200., game_delta_time), -1, 1) * 15
+        pitch_target = clamp(ctrl_fall_distance.update((math.sqrt(error[2]**2 + error[1]**2) - params['ctrl_fall_distance_target']) / 200., game_delta_time), -1, 1) * 15 #PID
         pitch_error = (flight.pitch - pitch_target) * deg2rad
         hdg_target = math.atan2(-error[2], -error[1]) * rad2deg
         hdg_error = norm_deg(flight.heading - hdg_target) * deg2rad
         #print(ctrl_fall_pitch.integral, math.sqrt(error[2]**2 + error[1]**2))
         if (abs(pitch_error) < 0.3):
             ctrl_fall_pitch.ki = params['ctrl_fall_pitch.ki']
-        pitch_flap = ctrl_fall_pitch.update(pitch_error, game_delta_time)
-        yaw_flap = ctrl_fall_yaw.update(hdg_error, game_delta_time)
-        combine_flaps(pitch_flap, yaw_flap) #+0.1trim
+        pitch_flap = ctrl_fall_pitch.update(pitch_error, game_delta_time) #PID
+        yaw_flap = ctrl_fall_yaw.update(hdg_error, game_delta_time) #PID
+        combine_flaps(pitch_flap, yaw_flap) #
         if error[0] < params['start_altitude']: #开始规划路径
             #frcount -= 1
             if frcount <= 0:
@@ -438,56 +448,49 @@ while True:
         #print(game_delta_time)
         (r_i, v_i, q_i, u_i) = sample_index(n_i, rk, vk, qk, uk) #规划的位置速度
         (r_i_, v_i_, q_i_, u_i_) = sample_index(n_i + 0.4 * K/tf, rk, vk, qk, uk) #预测一小段时间以后
-        q_i_mat = rotation_mat(q_i)
+        q_i_mat = rotation_mat(q_i) #local到target系旋转
         q_i_mat_ = rotation_mat(q_i_)
-        u_i = transform(u_i, q_i_mat)
+        u_i = transform(u_i, q_i_mat) #变换到target系
         u_i_ = transform(u_i_, q_i_mat_)
         head_i = transform(vec(1, 0, 0), q_i_mat)
         head_i_ = transform(vec(1, 0, 0), q_i_mat_)
-        #v_i_dir = v_i / npl.norm(v_i)
-#        target_a = u_i_
-#        target_v = v_i_
-#        target_x = r_i # + np.dot((error - r_i), v_i_dir) * v_i_dir
-#        #print(n_i, target_a, target_v, target_x)
-#        target_a += (target_v - vel) * k_v + (target_x - error) * k_x
         
-#        target_a = u_i + (v_i - vel) * k_v + (r_i - error) * k_x
-#        target_a_ = u_i_ + (v_i_ - vel) * k_v + (r_i - error) * k_x
+        #
         target_a = npl.norm(u_i) / mass * head_i + (v_i - vel) * k_v + (r_i - error) * k_x
         target_a_ = npl.norm(u_i_) / mass * head_i_ + (v_i - vel) * k_v + (r_i - error) * k_x
         
-        if debug_lines:
+        if debug_lines: #画采样指示线
             target_line.start = error
             target_line.end = (r_i[0], r_i[1], r_i[2])
             target2_line.start = error
             target2_line.end = (r_i_[0], r_i_[1], r_i_[2])
         
+        #最大/最小加速度
         max_throttle_ctrl = throttle_limit_ctrl[1] * (max_thrust / mass)
         min_throttle_ctrl = throttle_limit_ctrl[0] * (max_thrust / mass)
+        #目标变换到local系 clamp后变回来
         target_a = transform(target_a, q_i_mat.T)
         target_a = conic_clamp(target_a, min_throttle_ctrl, max_throttle_ctrl, max_tilt_off)
         target_a = transform(target_a, q_i_mat)
         target_a_ = transform(target_a_, q_i_mat_.T)
         target_a_ = conic_clamp(target_a_, min_throttle_ctrl, max_throttle_ctrl, max_tilt_off)
         target_a_ = transform(target_a_, q_i_mat_)
-#        if n_i < 0 :
-#            target_a = np.array([g0, 0, 0]) + u_i
         
-        #target_direction = target_a_ / npl.norm(target_a_)
-        #target_throttle = npl.norm(target_a) / (max_thrust / mass)
+        #方向按预测，大小按当前
         target_direction = target_a_ / npl.norm(target_a_)
         target_throttle = npl.norm(target_a) / (max_thrust / mass)
         #print(target_a)
-        if debug_lines:
+        
+        if debug_lines: #画目标朝向线
             head_line.start = error
-            head_line.end = error + target_direction * 8
+            head_line.end = error + target_direction * 20
         
         if n_i > 0:
             vessel.control.throttle = target_throttle
         
-        if (K - n_i) * tf / K < 6:
-            vessel.control.gear = True
-        if npl.norm(error[1:3]) < params['final_radius'] and npl.norm(error[0]) < params['final_height']:
+#        if (K - n_i) * tf / K < 6: #提前开起落架
+#            vessel.control.gear = True
+        if npl.norm(error[1:3]) < params['final_radius'] and npl.norm(error[0]) < params['final_height']: #进入最终落区
             vessel.control.gear = not vessel.control.gear
             engine_gimbal.set_field_float('Gimbal Limit', 30) # 防止震荡
             print('final')
@@ -495,19 +498,21 @@ while True:
     elif nav_mode == 'final':
         max_acc = throttle_limit_ctrl[1] * (max_thrust / mass) - g0
         max_acc_low = throttle_limit_ctrl[1] * final_throttle * (max_thrust / mass) - g0
-        est_h = error[0] - vel[0]**2 / (2 * max_acc)
-        est_h_low = error[0] - vel[0]**2 / (2 * max_acc_low)
+        est_h = error[0] - vel[0]**2 / (2 * max_acc) #低推力预测预留高度
+        est_h_low = error[0] - vel[0]**2 / (2 * max_acc_low) #全推力预测预留高度
         est_h_center = (est_h + est_h_low) / 2
         
+        #比例反馈
         vessel.control.throttle = clamp(lerp(throttle_limit_ctrl[1] * final_throttle, throttle_limit_ctrl[1], -est_h_low / (est_h - est_h_low) * (1+final_kp)), throttle_limit_ctrl[1], throttle_limit_ctrl[0])
         
+        #水平控制
         error_hor = v3(0, error[1], error[2])
         vel_hor = v3(0, vel[1], vel[2])
-        ctrl_hor = -error_hor * 0.03 - vel_hor * 0.06
+        ctrl_hor = -error_hor * params['final_hor_kp'] - vel_hor * params['final_hor_kv']
         target_direction = ctrl_hor + v3(1, 0, 0)
         target_direction /= npl.norm(target_direction)
         target_direction = conic_clamp(target_direction, 1, 1, max_tilt)
-    else:
+    else: #none 初始化
         nav_mode = 'launch'
         if (max_thrust == 0):
             vessel.control.activate_next_stage()
@@ -518,7 +523,7 @@ while True:
         #vessel.control.throttle = 0
         
         
-# 变换到机体坐标系计算姿态控制，以下xyz均指机体系
+    # 变换到机体坐标系计算姿态控制，以下xyz均指机体系
     if nav_mode in ['final', 'convex', 'launch', 'transit']:
         target_direction_local = transform(target_direction, rotation_srf2local) # 机体系的目标姿态的机体y轴指向
         avel_local = transform(avel, rotation_srf2local)  # 机体系角速度

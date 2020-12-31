@@ -53,7 +53,9 @@ k_v = 0.8 #d
 final_height = 80 #触发区域高度
 final_radius = 30 #触发区域半径
 final_throttle = 0.8
-final_kp = 1
+final_kp = 1 #竖直控制
+final_hor_kp = 0.03 #水平控制
+final_hor_kv = 0.06 #水平控制
 
 
 #debug
