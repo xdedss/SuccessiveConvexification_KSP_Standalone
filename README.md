@@ -6,6 +6,7 @@ forked from https://github.com/jonnyhyman/SuccessiveConvexification
 
 目前状态：完成原项目代码的整理，求解器跑通，封装成函数  ，krpc实现自动着陆
 
+![layout](img/project_layout.png)
 
 # 依赖项
 cvxpy                    0.4.11  
