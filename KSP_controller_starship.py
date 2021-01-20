@@ -16,7 +16,7 @@ print('--------')
 
 # 读取KSP_controller_params.txt中的参数
 params = {}
-with open('KSP_controller_params.txt', 'r', encoding='utf-8') as f:
+with open('KSP_controller_starship_params.txt', 'r', encoding='utf-8') as f:
     for line in f:
         pair = line.split('#')[0].split('=')
         if len(pair) == 2:
@@ -43,26 +43,62 @@ vessel = space_center.active_vessel
 flight = vessel.flight()
 body = vessel.orbit.body
 
+# 'TE2.19.BFS.SL.RAPTOR'
+# 'TE2.19.SS.RF.R'
+# 'TE2.19.SS.RF.L'
+# 'TE2.19.SS.FF.R'
+# 'TE2.19.SS.FF.L'
+# 'SyncModuleControlSurface' module
+# -90=完全抬起  +90=完全向下
+#f_rr = [m for m in vessel.parts.with_name('TE2.19.SS.RF.R')[0].modules if m.name == 'SyncModuleControlSurface'][0]
+#f_rr.set_field_float('Deploy Angle', 90)
+#f_rr.set_field_string('Deploy', 'false')
+#asdf
+
 #控制相关
-engine_gimbal = [m for m in vessel.parts.with_name('SSME')[0].modules if m.name == 'ModuleGimbal'][0]
-# StarShip Main Engine(大雾)
-engine_y = vessel.parts.with_name('SSME')[0].position(vessel.reference_frame)[1]
+engine_gimbal = [m for m in vessel.parts.with_name('TE2.19.BFS.SL.RAPTOR')[0].modules if m.name == 'ModuleGimbal']
+# 'TE2.19.BFS.SL.RAPTOR'
+engine_y = vessel.parts.with_name('TE2.19.BFS.SL.RAPTOR')[0].position(vessel.reference_frame)[1]
 
 # starship flap
 get_hinge = lambda tagname:[m for m in vessel.parts.with_tag(tagname)[0].modules if m.name=='ModuleRoboticServoHinge'][0]
-h_fl = get_hinge('h_f_l')
-h_fr = get_hinge('h_f_r')
-h_rl = get_hinge('h_r_l')
-h_rr = get_hinge('h_r_r')
+h_fl = get_hinge('h_fl')
+h_fr = get_hinge('h_fr')
+h_rl = get_hinge('h_rl')
+h_rr = get_hinge('h_rr')
 #set 'Target Angle' 0~180
-set_deploy = lambda h, deploy: h.set_field_float('Target Angle', math.asin(clamp(deploy, 0, 1)) * rad2deg + 5)
-set_retract = lambda h:h.set_field_float('Target Angle', 0)
+def set_deploy(h, deploy, center=90):
+    aoa = math.asin(clamp(deploy, 0, 1)) * rad2deg
+    h.set_field_float('Target Angle', clamp(90 + center - aoa, 0, 180))
+#set_deploy = lambda h, deploy: h.set_field_float('Target Angle', 180 - math.asin(clamp(deploy, 0, 1)) * rad2deg)
+#set_deploy_rev = lambda h, deploy: h.set_field_float('Target Angle', math.asin(clamp(deploy, 0, 1)) * rad2deg)
+set_retract = lambda h:h.set_field_float('Target Angle', 180)
 
 set_deploy(h_fl, 1)
 set_deploy(h_fr, 1)
 set_deploy(h_rl, 1)
 set_deploy(h_rr, 1)
+#asdf
 
+#fin_weight_ratio = 0.8 / 1.0
+#def combine_flaps(pitch_up, roll_right, roll_attack=0):
+#    roll_attack = clamp(roll_attack, -60, 60)
+#    pitch_up = clamp(pitch_up, -1, 1)
+#    roll_right = clamp(roll_right, -1, 1)
+#    ctrl_fl = (pitch_up + roll_right) / fin_weight_ratio #前后翼面不一样大 系数修正
+#    ctrl_fr = (pitch_up - roll_right) / fin_weight_ratio
+#    ctrl_rl = -pitch_up + roll_right
+#    ctrl_rr = -pitch_up - roll_right
+#    gap = max(0, 0.95 - max(ctrl_fl, ctrl_fr, ctrl_rl, ctrl_rr))
+#    ctrl_fl += gap
+#    ctrl_fr += gap
+#    ctrl_rl += gap
+#    ctrl_rr += gap
+#    set_deploy(h_fl, (ctrl_fl) / 2. + 0.5, 90 - roll_attack)
+#    set_deploy(h_fr, (ctrl_fr) / 2. + 0.5, 90 + roll_attack)
+#    set_deploy(h_rl, (ctrl_rl) / 2. + 0.5, 90 - roll_attack)
+#    set_deploy(h_rr, (ctrl_rr) / 2. + 0.5, 90 + roll_attack)
+    
 def combine_flaps(pitch_up, spin_right):
     pitch_up = clamp(pitch_up, -1, 1)
     #roll_right = clamp(roll_right, -1, 1)
@@ -86,10 +122,10 @@ def combine_flaps(pitch_up, spin_right):
     set_deploy(h_rr, (ctrl_rr) / 2. + 0.5)
 
 def retract_flaps():
-    (h_fl).set_field_float('Target Angle', 5)
-    (h_fr).set_field_float('Target Angle', 5)
-    (h_rl).set_field_float('Target Angle', 5)
-    (h_rr).set_field_float('Target Angle', 5)
+    (h_fl).set_field_float('Target Angle', 180)
+    (h_fr).set_field_float('Target Angle', 180)
+    (h_rl).set_field_float('Target Angle', 180)
+    (h_rr).set_field_float('Target Angle', 180)
 
 #gimbal
 #hinge_x = [m for m in vessel.parts.with_tag('hx')[0].modules if m.name=='ModuleRoboticServoHinge'][0]
@@ -178,8 +214,11 @@ ctrl_fall_pitch.kd = params['ctrl_fall_pitch.kd']
 #ctrl_fall_pitch.ki = params['ctrl_fall_pitch.ki'] # set that later
 ctrl_fall_pitch.integral_limit = params['ctrl_fall_pitch.integral_limit']
 ctrl_fall_yaw = PID()
-ctrl_fall_yaw.kp = params['ctrl_fall_yaw.kp']
+ctrl_fall_yaw.kp = 0 # params['ctrl_fall_yaw.kp']
 ctrl_fall_yaw.kd = params['ctrl_fall_yaw.kd']
+ctrl_fall_roll = PID()
+ctrl_fall_roll.kp = params['ctrl_fall_roll.kp']
+ctrl_fall_roll.kd = params['ctrl_fall_roll.kd']
 ctrl_fall_distance = PID()
 ctrl_fall_distance.kp = params['ctrl_fall_distance.kp']
 ctrl_fall_distance.kd = params['ctrl_fall_distance.kd']
@@ -359,7 +398,10 @@ def solve_path(vessel_profile, vessel_state, vessel_final_state):
         print('---------solve error----------')
 
 print('---------loop start-------------')
-combine_flaps(0, 0) #fin放到自然状态
+set_deploy(h_fl, 1)
+set_deploy(h_fr, 1)
+set_deploy(h_rl, 1)
+set_deploy(h_rr, 1) #fin放到自然状态
 while True:
     time.sleep(delta_time)
     real_time = time.time() - start_time
@@ -403,6 +445,7 @@ while True:
             time.sleep(1) #保持一秒
             vessel.control.pitch = 0
             vessel.control.throttle = 0
+            vessel.control.rcs = True
             nav_mode = 'fall'
             print('fall')
     elif nav_mode == 'fall': # 下落阶段 翼面控制姿态
@@ -410,12 +453,18 @@ while True:
         pitch_error = (flight.pitch - pitch_target) * deg2rad
         hdg_target = math.atan2(-error[2], -error[1]) * rad2deg
         hdg_error = norm_deg(flight.heading - hdg_target) * deg2rad
+        roll_error = flight.roll * deg2rad
         #print(ctrl_fall_pitch.integral, math.sqrt(error[2]**2 + error[1]**2))
         if (abs(pitch_error) < 0.3):
             ctrl_fall_pitch.ki = params['ctrl_fall_pitch.ki']
+            ctrl_fall_yaw.kp = params['ctrl_fall_yaw.kp']
         pitch_flap = ctrl_fall_pitch.update(pitch_error, game_delta_time) #PID
         yaw_flap = ctrl_fall_yaw.update(hdg_error, game_delta_time) #PID
-        combine_flaps(pitch_flap, yaw_flap) #
+        roll_flap = ctrl_fall_roll.update(roll_error, game_delta_time) #PID
+        #combine_flaps(pitch_flap, roll_flap, roll_error * rad2deg) #
+        combine_flaps(pitch_flap, yaw_flap)
+        vessel.control.yaw = yaw_flap
+        vessel.control.roll = roll_flap
         if error[0] < params['start_altitude']: #开始规划路径
             #frcount -= 1
             if frcount <= 0:
@@ -492,7 +541,7 @@ while True:
 #            vessel.control.gear = True
         if npl.norm(error[1:3]) < params['final_radius'] and npl.norm(error[0]) < params['final_height']: #进入最终落区
             vessel.control.gear = not vessel.control.gear
-            engine_gimbal.set_field_float('Gimbal Limit', 30) # 防止震荡
+            [g.set_field_float('Gimbal Limit', 20) for g in engine_gimbal] # 防止震荡
             print('final')
             nav_mode = 'final'
     elif nav_mode == 'final':
