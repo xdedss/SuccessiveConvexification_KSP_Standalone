@@ -55,7 +55,7 @@ body = vessel.orbit.body
 #f_rr.set_field_string('Deploy', 'false')
 #asdf
 
-#控制相关
+# starship main engines
 engine_gimbal = [m for m in vessel.parts.with_name('TE2.19.BFS.SL.RAPTOR')[0].modules if m.name == 'ModuleGimbal']
 # 'TE2.19.BFS.SL.RAPTOR'
 engine_y = vessel.parts.with_name('TE2.19.BFS.SL.RAPTOR')[0].position(vessel.reference_frame)[1]
