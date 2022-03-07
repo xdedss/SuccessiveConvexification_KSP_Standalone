@@ -21,6 +21,7 @@ forked from https://github.com/jonnyhyman/SuccessiveConvexification
 
 - krpc （适用1.8.x的krpc可以在[这里](http://krpc.s3-website-us-east-1.amazonaws.com/deploy/master/1417/)找到）  
 - Tundra Exploration  
+- KerbalFoundries2
 - TweakScale  
 - Better Time Warp（推荐，用来开慢速）  
 
